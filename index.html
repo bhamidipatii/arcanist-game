@@ -3,96 +3,200 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Wellness Survey | April 2026</title>
+<title>ARCANIST</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+<!--
+  ════════════════════════════════════════════════════
+  GOOGLE SHEETS SETUP — DO THIS ONCE
+  ════════════════════════════════════════════════════
+
+  1. Open Google Sheets → create a new sheet called "Arcanist Responses"
+  2. Go to Extensions → Apps Script
+  3. Delete any existing code and paste this entire script:
+
+  ─────────────────────────────────────────────────────
+  function doPost(e) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+
+    var swipeCards = [
+      's1','s2','s3','s4','s5','s6','s7','s8',
+      's9','s10','s11','s12','s13','s14','s15'
+    ];
+    var formKeys = [
+      'q1','q2','q3','q4','q5','q6','q7',
+      'q8','q9','q10','q11','q12','q13','q14'
+    ];
+
+    if (sheet.getLastRow() === 0) {
+      var headers = ['Timestamp'];
+      swipeCards.forEach(function(k){ headers.push(k + '_swipe'); });
+      formKeys.forEach(function(k){ headers.push(k + '_form'); });
+      headers.push('yes_count','no_count');
+      sheet.appendRow(headers);
+    }
+
+    var row = [data.timestamp];
+    swipeCards.forEach(function(k){
+      row.push(data.swipes && data.swipes[k] !== undefined ? (data.swipes[k] ? 'YES' : 'NO') : '');
+    });
+    formKeys.forEach(function(k){
+      var v = (data.form && data.form[k]) || (data.voice && data.voice[k]) || (data.rank && data.rank[k]) || '';
+      row.push(Array.isArray(v) ? v.join(' | ') : JSON.stringify(v));
+    });
+    row.push(data.yesCount || 0, data.noCount || 0);
+    sheet.appendRow(row);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({status:'ok'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  ─────────────────────────────────────────────────────
+
+  4. Click Deploy → New Deployment
+  5. Type: Web App
+  6. Execute as: Me
+  7. Who has access: Anyone
+  8. Click Deploy → copy the Web App URL
+  9. Paste that URL below where it says PASTE_YOUR_APPS_SCRIPT_URL_HERE
+
+  ════════════════════════════════════════════════════
+-->
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
 
-/* ===================== SWIPE STAGE ===================== */
+.brand-heading{
+  font-family:'Impact','Arial Black',sans-serif;
+  font-size:clamp(58px,18vw,110px);
+  font-weight:900;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:#fff;
+  line-height:1;
+  margin-bottom:1.75rem;
+}
+
+/* ════ LANDING ════ */
+.land-stage{
+  width:100%;max-width:480px;min-height:100vh;
+  display:flex;flex-direction:column;
+  justify-content:flex-start;
+  padding:3rem 2rem 3rem;
+  background:#000;
+}
+.land-label{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:#5a5852;margin-bottom:2rem;
+}
+.land-sub{
+  font-size:17px;color:rgba(255,255,255,.55);
+  line-height:1.6;margin-bottom:2rem;font-weight:300;
+}
+.land-hint{
+  display:flex;align-items:center;gap:1.5rem;margin-bottom:2.75rem;
+}
+.land-hint-item{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:rgba(255,255,255,.45);letter-spacing:.06em;
+}
+.hint-pill{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+}
+.hp-no{background:rgba(185,28,28,.25);color:#f87171}
+.hp-yes{background:rgba(26,107,58,.25);color:#4ade80}
+.land-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  border:0.5px solid rgba(255,255,255,.3);border-radius:40px;
+  padding:14px 28px;font-family:'DM Sans',sans-serif;
+  font-size:18px;color:#fff;background:none;cursor:pointer;
+  transition:border-color .2s;width:fit-content;
+}
+.land-btn:hover{border-color:rgba(255,255,255,.7)}
+.land-btn svg{width:18px;height:18px}
+
+/* ════ SWIPE ════ */
 .swipe-stage{
   width:100%;max-width:480px;height:100vh;
   display:flex;flex-direction:column;align-items:center;
-  padding:2.5rem 1.5rem 2rem;
-  position:relative;
+  padding:2rem 1.5rem 1.5rem;position:relative;
 }
-.sw-top{width:100%;margin-bottom:1.5rem}
-.sw-title{font-size:clamp(42px,12vw,72px);font-weight:700;line-height:.95;letter-spacing:-.02em;text-transform:uppercase;color:#fff}
-.sw-prog{width:100%;height:2px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:1rem}
+.sw-top{width:100%;margin-bottom:1rem}
+.sw-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#5a5852;margin-bottom:.5rem;}
+.sw-prog{width:100%;height:2px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:.75rem}
 .sw-prog-fill{height:100%;background:#fff;border-radius:2px;transition:width .4s ease}
 
-/* card stack */
 .card-stack{
   position:relative;width:100%;
   flex:1;display:flex;align-items:center;justify-content:center;
-  margin:1rem 0;
+  margin:.5rem 0;
 }
 .swipe-card{
-  position:absolute;
-  width:92%;max-width:360px;
-  background:#f0f0ee;
-  border-radius:24px;
-  padding:1.75rem;
+  position:absolute;width:100%;max-width:480px;
+  background:#f0f0ee;border-radius:24px;padding:2rem;
   display:flex;flex-direction:column;gap:1.25rem;
-  cursor:grab;
-  transform-origin:center bottom;
-  will-change:transform;
-  touch-action:none;
+  cursor:grab;transform-origin:center bottom;
+  will-change:transform;touch-action:none;
 }
 .swipe-card:active{cursor:grabbing}
 .swipe-card.top{z-index:10}
 .swipe-card.b1{z-index:9;transform:rotate(-4deg) translateY(12px) scale(.97);pointer-events:none}
 .swipe-card.b2{z-index:8;transform:rotate(4deg) translateY(22px) scale(.94);pointer-events:none}
 .swipe-card.b3{z-index:7;transform:rotate(-2deg) translateY(32px) scale(.91);pointer-events:none}
-
 .card-tag{
   display:inline-block;align-self:flex-start;
   background:#fff;color:#1a1a1a;
-  font-size:13px;font-weight:500;
-  padding:5px 14px;border-radius:20px;
+  font-size:13px;font-weight:500;padding:5px 14px;border-radius:20px;
 }
 .card-text{
   font-family:'DM Sans',sans-serif;
-  font-size:clamp(22px,5.5vw,30px);
-  font-weight:400;
-  line-height:1.25;
-  color:#1a1a1a;
-  flex:1;
+  font-size:clamp(16px,4vw,20px);font-weight:400;line-height:1.35;color:#1a1a1a;flex:1;
 }
-
-/* swipe overlays */
 .ov-yes,.ov-no{
-  position:absolute;top:1.5rem;
-  padding:6px 14px;border-radius:8px;
+  position:absolute;top:1.5rem;padding:6px 14px;border-radius:8px;
   font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   opacity:0;transition:opacity .08s;pointer-events:none;
 }
 .ov-yes{left:1.5rem;background:#d4f5e2;color:#1a6b3a;border:2px solid #1a6b3a}
 .ov-no{right:1.5rem;background:#fde8e8;color:#b91c1c;border:2px solid #b91c1c}
 
-/* hint */
-.sw-hint{
-  display:flex;align-items:center;justify-content:center;gap:2rem;
-  font-size:12px;color:rgba(255,255,255,.45);letter-spacing:.06em;
+.sw-bottom{
+  width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 4px;
 }
-.sw-hint span{display:flex;align-items:center;gap:6px}
+.sw-hint{
+  display:flex;align-items:center;gap:1.25rem;
+  font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.06em;
+}
+.sw-hint span{display:flex;align-items:center;gap:5px}
 .hint-icon{
-  width:32px;height:32px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:700;
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
 }
 .hint-no{background:rgba(185,28,28,.25);color:#f87171}
 .hint-yes{background:rgba(26,107,58,.25);color:#4ade80}
+.undo-btn{
+  display:flex;align-items:center;gap:5px;
+  background:none;border:0.5px solid rgba(255,255,255,.2);
+  border-radius:20px;padding:7px 16px;
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.4);cursor:pointer;
+  transition:all .2s;letter-spacing:.04em;
+}
+.undo-btn:hover:not(:disabled){border-color:rgba(255,255,255,.5);color:rgba(255,255,255,.75)}
+.undo-btn:disabled{opacity:.2;cursor:default}
+.undo-btn svg{width:12px;height:12px}
 
-/* ===================== FORM STAGE ===================== */
+/* ════ FORM ════ */
 .form-stage{
-  width:100%;max-width:480px;
-  min-height:100vh;
+  width:100%;max-width:480px;min-height:100vh;
   display:flex;flex-direction:column;
-  background:#fff;color:#1a1916;
-  overflow-y:auto;
+  background:#fff;color:#1a1916;overflow-y:auto;
 }
 .f-header{padding:1.5rem 1.75rem 0}
 .f-pill{
@@ -110,123 +214,51 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;display:flex;fl
 .opt{
   display:flex;align-items:center;gap:10px;
   padding:10px 13px;border:0.5px solid rgba(0,0,0,.12);
-  border-radius:10px;cursor:pointer;
-  background:#fff;font-size:13px;color:#1a1916;
-  text-align:left;width:100%;transition:all .15s;
-  font-family:'DM Sans',sans-serif;
+  border-radius:10px;cursor:pointer;background:#fff;font-size:13px;color:#1a1916;
+  text-align:left;width:100%;transition:all .15s;font-family:'DM Sans',sans-serif;
 }
 .opt:hover{border-color:rgba(0,0,0,.22);background:#f5f4f2}
 .opt.selected{border-color:rgba(0,0,0,.32);background:#f5f4f2}
-.ind{
-  width:16px;height:16px;flex-shrink:0;
-  border:1px solid rgba(0,0,0,.22);
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;
-}
+.ind{width:16px;height:16px;flex-shrink:0;border:1px solid rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .ind.r{border-radius:50%}.ind.s{border-radius:3px}
 .opt.selected .ind{background:#1a1916;border-color:#1a1916}
 .tk{display:none}
 .opt.selected .tk{display:block}
-.other-input{
-  width:100%;padding:8px 12px;margin-top:4px;
-  border:0.5px solid rgba(0,0,0,.12);border-radius:8px;
-  background:#f5f4f2;font-family:'DM Sans',sans-serif;
-  font-size:13px;color:#1a1916;outline:none;
-}
+.other-input{width:100%;padding:8px 12px;margin-top:4px;border:0.5px solid rgba(0,0,0,.12);border-radius:8px;background:#f5f4f2;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1916;outline:none;}
 .other-input:focus{border-color:rgba(0,0,0,.3)}
-.plain-input{
-  width:100%;padding:10px 14px;
-  border:0.5px solid rgba(0,0,0,.12);border-radius:10px;
-  background:#f5f4f2;font-family:'DM Sans',sans-serif;
-  font-size:14px;color:#1a1916;outline:none;
-}
+.plain-input{width:100%;padding:10px 14px;border:0.5px solid rgba(0,0,0,.12);border-radius:10px;background:#f5f4f2;font-family:'DM Sans',sans-serif;font-size:14px;color:#1a1916;outline:none;}
 .plain-input:focus{border-color:rgba(0,0,0,.3)}
-
-/* voice */
-.voice-area{
-  background:#f5f4f2;border:0.5px solid rgba(0,0,0,.12);
-  border-radius:12px;padding:14px 16px;
-}
+.voice-area{background:#f5f4f2;border:0.5px solid rgba(0,0,0,.12);border-radius:12px;padding:14px 16px;}
 .mic-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.mic-btn{
-  width:42px;height:42px;border-radius:50%;
-  border:0.5px solid rgba(0,0,0,.2);
-  background:#fff;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;transition:all .2s;position:relative;
-}
+.mic-btn{width:42px;height:42px;border-radius:50%;border:0.5px solid rgba(0,0,0,.2);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s;position:relative;}
 .mic-btn svg{width:17px;height:17px;color:#5a5852}
 .mic-btn.on{background:#fff0f0;border-color:transparent}
 .mic-btn.on svg{color:#b91c1c}
-.pulse{
-  display:none;position:absolute;inset:-7px;border-radius:50%;
-  border:1px solid #b91c1c;opacity:.4;
-  animation:po 1.4s ease-out infinite;
-}
+.pulse{display:none;position:absolute;inset:-7px;border-radius:50%;border:1px solid #b91c1c;opacity:.4;animation:po 1.4s ease-out infinite;}
 .mic-btn.on .pulse{display:block}
 @keyframes po{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.65);opacity:0}}
 .mic-status{font-size:12px;color:#9a9890}
 .mic-status.live{color:#b91c1c}
-.voice-ta{
-  width:100%;background:transparent;border:none;outline:none;
-  font-family:'DM Sans',sans-serif;font-size:14px;
-  line-height:1.65;color:#1a1916;resize:none;min-height:56px;
-}
+.voice-ta{width:100%;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.65;color:#1a1916;resize:none;min-height:56px;}
 .voice-ta::placeholder{color:#b0aea8}
 .edit-note{font-size:11px;color:#9a9890;margin-top:6px;text-align:right}
-
-/* scale */
 .scale-row{display:flex;gap:6px;flex-wrap:wrap}
-.scale-btn{
-  width:44px;height:44px;border-radius:10px;
-  border:0.5px solid rgba(0,0,0,.12);background:#fff;
-  font-size:14px;font-weight:500;cursor:pointer;color:#5a5852;
-  transition:all .15s;font-family:'DM Sans',sans-serif;
-}
+.scale-btn{width:44px;height:44px;border-radius:10px;border:0.5px solid rgba(0,0,0,.12);background:#fff;font-size:14px;font-weight:500;cursor:pointer;color:#5a5852;transition:all .15s;font-family:'DM Sans',sans-serif;}
 .scale-btn.selected{background:#1a1916;color:#fff;border-color:#1a1916}
 .scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#9a9890;margin-top:4px}
-
-/* rank */
-.rank-item{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 13px;border:0.5px solid rgba(0,0,0,.12);
-  border-radius:10px;background:#fff;cursor:grab;
-  margin-bottom:6px;font-size:13px;color:#1a1916;user-select:none;
-}
-.rank-num{
-  width:22px;height:22px;border-radius:50%;background:#f5f4f2;
-  border:0.5px solid rgba(0,0,0,.12);
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:500;color:#5a5852;flex-shrink:0;
-}
-
-/* footer */
-.f-footer{
-  padding:.875rem 1.75rem 1.5rem;
-  display:flex;align-items:center;justify-content:space-between;
-  border-top:0.5px solid rgba(0,0,0,.08);
-  background:#fff;
-}
-.btn-skip{
-  background:none;border:none;font-family:'DM Sans',sans-serif;
-  font-size:13px;color:#9a9890;cursor:pointer;padding:0;
-}
+.rank-item{display:flex;align-items:center;gap:10px;padding:10px 13px;border:0.5px solid rgba(0,0,0,.12);border-radius:10px;background:#fff;cursor:grab;margin-bottom:6px;font-size:13px;color:#1a1916;user-select:none;}
+.rank-num{width:22px;height:22px;border-radius:50%;background:#f5f4f2;border:0.5px solid rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#5a5852;flex-shrink:0;}
+.f-footer{padding:.875rem 1.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-top:0.5px solid rgba(0,0,0,.08);background:#fff;}
+.btn-skip{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#9a9890;cursor:pointer;padding:0;}
 .btn-skip:hover{color:#5a5852}
 .nav-row{display:flex;gap:8px}
-.btn-back{
-  background:none;border:0.5px solid rgba(0,0,0,.2);
-  font-family:'DM Sans',sans-serif;font-size:13px;color:#5a5852;
-  cursor:pointer;border-radius:10px;padding:9px 18px;transition:background .15s;
-}
+.btn-back{background:none;border:0.5px solid rgba(0,0,0,.2);font-family:'DM Sans',sans-serif;font-size:13px;color:#5a5852;cursor:pointer;border-radius:10px;padding:9px 18px;transition:background .15s;}
 .btn-back:hover{background:#f5f4f2}
-.btn-next{
-  background:#1a1916;color:#fff;border:none;border-radius:10px;
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
-  padding:9px 24px;cursor:pointer;transition:opacity .2s;
-}
+.btn-next{background:#1a1916;color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 24px;cursor:pointer;transition:opacity .2s;}
 .btn-next:disabled{opacity:.25;cursor:default}
 .btn-next:not(:disabled):hover{opacity:.82}
 
-/* done */
+/* ════ DONE ════ */
 .done-stage{
   width:100%;max-width:480px;min-height:100vh;
   background:#000;display:flex;flex-direction:column;
@@ -236,10 +268,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;display:flex;fl
 .done-title{font-size:clamp(42px,12vw,72px);font-weight:700;line-height:.95;letter-spacing:-.02em;text-transform:uppercase;color:#fff}
 .done-sub{font-size:15px;color:rgba(255,255,255,.55);max-width:320px;line-height:1.65}
 .tally{display:flex;gap:12px;margin-top:.5rem}
-.tally-box{
-  flex:1;background:rgba(255,255,255,.06);border:0.5px solid rgba(255,255,255,.12);
-  border-radius:12px;padding:16px;text-align:center;
-}
+.tally-box{flex:1;background:rgba(255,255,255,.06);border:0.5px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center;}
 .tally-num{font-size:28px;font-weight:700}
 .tally-label{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
 .tally-yes .tally-num{color:#4ade80}
@@ -248,87 +277,51 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;display:flex;fl
 </head>
 <body>
 <div id="app"></div>
-
 <script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz22pDNYCkXFKJZIqohmMu1NdKfDEg_JuQiAuwSNfhUkk_coFEtoI9TI_IVrj9PYVyA/exec';
+
 const SWIPE_CARDS = [
-  {id:'s1',  tag:'Health identity',   text:'I actively invest time and money in improving my health.'},
-  {id:'s2',  tag:'Supplements',       text:'I take supplements or vitamins regularly.'},
-  {id:'s3',  tag:'Influence',         text:'Podcasts like Huberman Lab or Peter Attia shape how I think about wellness.'},
-  {id:'s4',  tag:'Influence',         text:'My doctor or nutritionist guides my supplement choices.'},
-  {id:'s5',  tag:'Testing',           text:'I\'ve had a blood test specifically to check for nutritional deficiencies — not just a routine checkup.'},
-  {id:'s6',  tag:'Clinics',           text:'I\'ve visited a wellness clinic or longevity centre.'},
-  {id:'s7',  tag:'Frustration',       text:'I don\'t really know if what I\'m taking is actually working.'},
-  {id:'s8',  tag:'Frustration',       text:'There\'s too much conflicting information — it\'s hard to know who to trust.'},
-  {id:'s9',  tag:'Confidence',        text:'I\'m confident the supplements I take are the right ones for my body.'},
-  {id:'s10', tag:'Personalisation',   text:'I\'d trust a supplement formula made specifically for me, based on a blood test or health assessment.'},
-  {id:'s11', tag:'Format',            text:'I\'d prefer one single daily formula over managing multiple separate supplements.'},
-  {id:'s12', tag:'Brand values',      text:'It matters to me that a wellness brand understands Indian bodies specifically — not just adapts a Western product.'},
+  {id:'s1',  tag:'Ownership',     text:'Do you wash your jeans less than once a month?'},
+  {id:'s2',  tag:'Raw denim',     text:'Have you ever owned raw or unwashed denim?'},
+  {id:'s3',  tag:'Spend',         text:'Have you ever paid more than ₹3,000 for a single pair of jeans?'},
+  {id:'s4',  tag:'Spend',         text:'Have you ever paid more than ₹8,000 for a single pair of jeans?'},
+  {id:'s5',  tag:'Indian market', text:'Do you think most Indian denim brands fit Indian bodies well?'},
+  {id:'s6',  tag:'Community',     text:'Do you follow any denim communities or creators online?'},
+  {id:'s7',  tag:'Intention',     text:'Have you ever bought something specifically because it would age or fade beautifully over time?'},
+  {id:'s8',  tag:'Attention',     text:'Have you ever tracked how a piece of clothing changed with wear?'},
+  {id:'s9',  tag:'Behaviour',     text:'Do you research a product deeply before buying it?'},
+  {id:'s10', tag:'Patience',      text:'Have you ever waited more than a week before buying something you already wanted?'},
+  {id:'s11', tag:'Culture',       text:'Do you think most people dress to fit in rather than stand out?'},
+  {id:'s12', tag:'Feeling',       text:'Has a piece of clothing ever felt like it genuinely carried your story?'},
+  {id:'s13', tag:'Philosophy',    text:'If a brand said "this product isn\'t finished — you complete it through wearing it," would that appeal to you?'},
+  {id:'s14', tag:'Category',      text:'Do you believe most fast fashion jeans are basically the same product with different labels?'},
+  {id:'s15', tag:'Commitment',    text:'Would you consider spending ₹15,000+ on a pair of jeans if you knew they\'d last a decade?'},
 ];
 
 const FORM_QS = [
-  {id:'q2',type:'check',required:true,section:'Your routine',
-    text:'What does your typical workout week look like?',sub:'Select all that apply.',
-    opts:['Strength training / weight training','Pilates / barre','CrossFit / functional training','Running / endurance sports','Yoga','Sports (tennis, swimming, cycling, etc.)','I work out but nothing structured','I don\'t work out regularly'],other:true},
-  {id:'q4',type:'voice',required:false,section:'Your routine',
-    text:'Can you list what supplements you currently take — or used to take?',
-    sub:'Brand names most useful. Skip if not applicable.',
-    placeholder:'Speak or type — e.g. Thorne B-Complex, Magnesium Glycinate, AG1...'},
-  {id:'q5',type:'check',required:false,section:'Your routine',
-    text:'Where do you currently buy your supplements?',sub:'Select all that apply.',
-    opts:['Amazon India','International websites (iHerb, Bioniq, Thorne, etc.)','Local pharmacy or health store','Brand\'s own website','Quick commerce (Zepto, Blinkit, Swiggy Instamart)','Someone else buys them','I bring them from trips abroad','N/A — I don\'t buy supplements'],other:true},
-  {id:'q6',type:'radio',required:true,section:'Your routine',
-    text:'Roughly how much do you spend on supplements and wellness products per month?',
-    opts:['Less than ₹2,000','₹2,000 to 5,000','₹5,000 to 10,000','₹10,000 to 20,000','More than ₹20,000','I don\'t track this / not sure','I don\'t buy supplements']},
-  {id:'q7',type:'check',required:true,section:'What shapes your choices',
-    text:'Who or what influences your wellness choices the most?',
-    opts:['Podcasts (Huberman, Peter Attia, Rhonda Patrick, etc.)','Indian social media / wellness influencers','Foreign social media / wellness influencers','Friends or family','My doctor, nutritionist, or health practitioner','Longevity / biohacking content (Bryan Johnson, Dave Asprey)','My gym trainer','I research on my own (Google, Reddit)','I don\'t consume wellness content']},
-  {id:'q9a',type:'voice',required:false,section:'What shapes your choices',
-    text:'Which wellness clinic or facility did you visit?',
-    sub:'Skip if not applicable.',
-    placeholder:'Speak or type — e.g. SHA Wellness, Viome, Lanserhof...'},
-  {id:'q11',type:'scale',required:false,section:'Personalisation',
-    text:'How confident are you that your current supplements are right for your body?',
-    min:'Not confident',max:'Extremely confident',n:5},
-  {id:'q14',type:'rank',required:true,section:'Personalisation',
-    text:'Rank these in order of interest — if a premium wellness space offered them.',
-    sub:'Drag to reorder — 1 = most interested.',
-    items:['A personalised supplement formula based on a quiz or blood test','Formulated beverages for my specific needs','A curated selection of vetted global wellness products','Access to wellness practitioners for my specific protocol']},
-  {id:'q16',type:'radio',required:true,section:'Trust & brand',
-    text:'What would make you most likely to trust a new wellness brand in India?',
-    opts:['Recommendation from someone I respect','A brand backed by medical professionals','Founders or early users I recognise','International quality certifications','Measurable results in my own health data','Premium design and in-store experience'],other:true},
-  {id:'q18',type:'radio',required:true,section:'Trust & brand',
-    text:'How much would you pay per month for a personalised supplement subscription?',
-    opts:['Less than ₹1,000','₹1,000 to 3,000','₹3,000 to 5,000','₹5,000 to 8,000','More than ₹8,000 if quality justifies it','I\'d need to try it first']},
-  {id:'q19',type:'voice',required:true,section:'One last thing',
-    text:'If you could fix one thing about how you manage your health today, what would it be?',
-    placeholder:'Take your time. No right or wrong answers.'},
-  {id:'q20',type:'radio',required:true,section:'About you',
-    text:'Age range',opts:['18 to 24','25 to 30','31 to 35','36 to 40','41 to 50','51+']},
-  {id:'q21',type:'radio',required:true,section:'About you',
-    text:'Gender',opts:['Male','Female','Prefer not to say']},
-  {id:'q22',type:'text',required:true,section:'About you',
-    text:'City you currently live in',placeholder:'Type your city...'},
-  {id:'q23',type:'radio',required:true,section:'About you',
-    text:'Which best describes your professional situation?',
-    opts:['Founder / entrepreneur','Senior executive / C-suite','Working professional','Creative / freelance / consulting','Homemaker with active personal interests','Student'],other:true},
-  {id:'q24',type:'radio',required:true,section:'About you',
-    text:'Have you travelled internationally in the past 12 months?',
-    opts:['Yes, more than 3 times','Yes, 1 to 3 times','No, but I plan to','No']},
+  {id:'q1',type:'radio',required:true,section:'Your denim life',
+    text:'How many pairs of jeans do you currently own?',
+    opts:['1 to 2','3 to 5','6 to 10','More than 10']},
+  {id:'q2',type:'check',required:true,section:'Your denim life',
+    text:'What matters most to you when buying jeans?',sub:'Select all that apply.',
+    opts:['Fit and cut','How they will age and fade','Brand reputation','Fabric quality','Price','Made locally or ethically','Streetwear or cultural credibility'],other:true},
+  {id:'q3',type:'radio',required:true,section:'Your denim life',
+    text:'How long do you typically keep a pair of jeans before replacing them?',
+    opts:['Less than 6 months','6 months to a year','1 to 2 years','2 to 4 years','I keep them until they fall apart']},
+  {id:'q4',type:'check',required:true,section:'What you know',
+    text:'Which of these terms are you familiar with?',sub:'Select all that apply.',
+    opts:['Selvedge denim','Raw denim','Sanforized denim','Wabi-sabi','Indigo fading','Whiskers and honeycombs','None of these']},
+  {id:'q5',type:'check',required:false,section:'Fit & frustration',
+    text:'Where does the fit usually break down for you?',sub:'Select all that apply.',
+    opts:['Thighs too tight','Waist too big relative to hips','Rise is wrong','Inseam too long','Seat doesn\'t fit right','Fit is generally fine'],other:true},
+  {id:'q6',type:'radio',required:true,section:'About you',
+    text:'Age range',opts:['18–25','26–35','36–45','46–60','60+']},
 ];
 
-let stage = 'swipe';
-let swipeIdx = 0;
-let swipeAnswers = {};
-let yesCount = 0, noCount = 0;
-let formIdx = 0;
-let formAnswers = {};
-let rankOrders = {};
-let voiceText = {};
-let micActive = false;
-let recognition = null;
-const app = document.getElementById('app');
+let stage='land',swipeIdx=0,swipeAnswers={},swipeHistory=[],yesCount=0,noCount=0;
+let formIdx=0,formAnswers={},rankOrders={},voiceText={},micActive=false,recognition=null;
+const app=document.getElementById('app');
 
-/* ---- SPEECH ---- */
 function getSpeech(){
   const S=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!S)return null;
@@ -336,48 +329,83 @@ function getSpeech(){
 }
 function stopMic(){if(recognition){recognition.stop();recognition=null;}micActive=false;}
 
-/* ===================== SWIPE ===================== */
+function saveToSheet(data){
+  if(!SHEET_URL||SHEET_URL==='PASTE_YOUR_APPS_SCRIPT_URL_HERE')return;
+  fetch(SHEET_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(data)}).catch(()=>{});
+}
+
+/* ── LANDING ── */
+function renderLand(){
+  app.innerHTML=`<div class="land-stage">
+    <p class="land-label">Arcanist &middot; April 2026</p>
+    <div class="brand-heading">ARCANIST</div>
+    <p class="land-sub">A quick game about how you live in your jeans. Swipe, tap, done.</p>
+    <div class="land-hint">
+      <div class="land-hint-item">
+        <div class="hint-pill hp-no">✕</div>
+        <span>swipe left = no</span>
+      </div>
+      <div class="land-hint-item">
+        <div class="hint-pill hp-yes">✓</div>
+        <span>swipe right = yes</span>
+      </div>
+    </div>
+    <button class="land-btn" onclick="stage='swipe';renderSwipe()">
+      Begin
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 10h12M11 5l5 5-5 5"/>
+      </svg>
+    </button>
+  </div>`;
+}
+
+/* ── SWIPE ── */
 function renderSwipe(){
   const pct=Math.round((swipeIdx/SWIPE_CARDS.length)*100);
   const visible=SWIPE_CARDS.slice(swipeIdx,swipeIdx+4);
-
+  const canUndo=swipeHistory.length>0;
   app.innerHTML=`<div class="swipe-stage">
     <div class="sw-top">
-      <div class="sw-title">Quick<br>takes</div>
-      <div class="sw-prog"><div class="sw-prog-fill" id="spf" style="width:${pct}%"></div></div>
+      <p class="sw-label">Arcanist</p>
+      <div class="sw-prog"><div class="sw-prog-fill" style="width:${pct}%"></div></div>
     </div>
     <div class="card-stack" id="cstack">
       ${visible.slice().reverse().map((c,ri)=>{
-        const fwdIdx=visible.length-1-ri;
-        let cls=fwdIdx===0?'top':fwdIdx===1?'b1':fwdIdx===2?'b2':'b3';
-        return `<div class="swipe-card ${cls}" data-id="${c.id}" data-top="${fwdIdx===0?1:0}">
-          <div class="ov-yes">relate ✓</div>
-          <div class="ov-no">✕ pass</div>
+        const fi=visible.length-1-ri;
+        const cls=fi===0?'top':fi===1?'b1':fi===2?'b2':'b3';
+        return `<div class="swipe-card ${cls}" data-id="${c.id}">
+          <div class="ov-yes">yes ✓</div>
+          <div class="ov-no">✕ no</div>
           <span class="card-tag">${c.tag}</span>
           <p class="card-text">${c.text}</p>
         </div>`;
       }).join('')}
     </div>
-    <div class="sw-hint">
-      <span><span class="hint-icon hint-no">✕</span> swipe left = no</span>
-      <span><span class="hint-icon hint-yes">✓</span> swipe right = yes</span>
+    <div class="sw-bottom">
+      <div class="sw-hint">
+        <span><span class="hint-icon hint-no">✕</span> no</span>
+        <span><span class="hint-icon hint-yes">✓</span> yes</span>
+      </div>
+      <button class="undo-btn" ${canUndo?'':'disabled'} onclick="undoSwipe()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3.5 8.5a5 5 0 1 0 1.2-3.3L2 3"/>
+          <path d="M2 3v3.5h3.5"/>
+        </svg>
+        undo
+      </button>
     </div>
   </div>`;
-
   setupSwipeDrag();
 }
 
 function setupSwipeDrag(){
   const card=document.querySelector('.swipe-card.top');
   if(!card)return;
-  let sx=0,sy=0,cx=0,dragging=false;
-
-  function start(x,y){sx=x;sy=y;dragging=true;card.style.transition='none';}
-  function move(x,y){
-    if(!dragging)return;
-    cx=x-sx;
-    const rot=cx*0.07;
-    card.style.transform=`translateX(${cx}px) rotate(${rot}deg)`;
+  let sx=0,cx=0,dragging=false;
+  function start(x){sx=x;dragging=true;card.style.transition='none';}
+  function move(x){
+    if(!dragging)return;cx=x-sx;
+    card.style.transform=`translateX(${cx}px) rotate(${cx*0.07}deg)`;
     const oy=card.querySelector('.ov-yes'),on=card.querySelector('.ov-no');
     if(cx>30){oy.style.opacity=Math.min(1,(cx-30)/70);on.style.opacity=0;}
     else if(cx<-30){on.style.opacity=Math.min(1,(-cx-30)/70);oy.style.opacity=0;}
@@ -386,13 +414,8 @@ function setupSwipeDrag(){
   function end(){
     if(!dragging)return;dragging=false;
     card.style.transition='transform .3s ease';
-    if(cx>80) fly(true);
-    else if(cx<-80) fly(false);
-    else{
-      card.style.transform='';
-      card.querySelector('.ov-yes').style.opacity=0;
-      card.querySelector('.ov-no').style.opacity=0;
-    }
+    if(cx>80)fly(true);else if(cx<-80)fly(false);
+    else{card.style.transform='';card.querySelector('.ov-yes').style.opacity=0;card.querySelector('.ov-no').style.opacity=0;}
   }
   function fly(yes){
     card.style.transition='transform .35s ease,opacity .3s ease';
@@ -400,17 +423,17 @@ function setupSwipeDrag(){
     card.style.opacity='0';
     setTimeout(()=>recordSwipe(yes),320);
   }
-
-  card.addEventListener('mousedown',e=>{start(e.clientX,e.clientY);e.preventDefault();});
-  document.addEventListener('mousemove',e=>{move(e.clientX,e.clientY);});
+  card.addEventListener('mousedown',e=>{start(e.clientX);e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(dragging)move(e.clientX);});
   document.addEventListener('mouseup',()=>{if(dragging)end();});
-  card.addEventListener('touchstart',e=>{const t=e.touches[0];start(t.clientX,t.clientY);},{passive:true});
-  card.addEventListener('touchmove',e=>{const t=e.touches[0];move(t.clientX,t.clientY);},{passive:true});
+  card.addEventListener('touchstart',e=>{start(e.touches[0].clientX);},{passive:true});
+  card.addEventListener('touchmove',e=>{if(dragging)move(e.touches[0].clientX);},{passive:true});
   card.addEventListener('touchend',()=>{if(dragging)end();});
 }
 
 function recordSwipe(yes){
   const c=SWIPE_CARDS[swipeIdx];
+  swipeHistory.push({id:c.id,ans:yes,yesCount,noCount,idx:swipeIdx});
   swipeAnswers[c.id]=yes;
   if(yes)yesCount++;else noCount++;
   swipeIdx++;
@@ -418,10 +441,17 @@ function recordSwipe(yes){
   else renderSwipe();
 }
 
-/* ===================== FORM ===================== */
+function undoSwipe(){
+  if(!swipeHistory.length)return;
+  const prev=swipeHistory.pop();
+  delete swipeAnswers[prev.id];
+  yesCount=prev.yesCount;noCount=prev.noCount;swipeIdx=prev.idx;
+  renderSwipe();
+}
+
+/* ── FORM ── */
 function isAnswered(i){
-  const q=FORM_QS[i];
-  if(!q.required)return true;
+  const q=FORM_QS[i];if(!q.required)return true;
   if(q.type==='radio')return !!formAnswers[q.id];
   if(q.type==='check')return(formAnswers[q.id]||[]).length>0;
   if(q.type==='scale')return formAnswers[q.id]!==undefined;
@@ -430,17 +460,14 @@ function isAnswered(i){
   if(q.type==='text')return(formAnswers[q.id]||'').trim().length>0;
   return false;
 }
-
 function renderForm(){
   stopMic();
-  if(formIdx>=FORM_QS.length){renderDone();return;}
+  if(formIdx>=FORM_QS.length){submitAndDone();return;}
   const q=FORM_QS[formIdx];
   const totalQ=SWIPE_CARDS.length+FORM_QS.length;
   const doneQ=swipeIdx+formIdx;
   const pct=Math.round((doneQ/totalQ)*100);
-  const qnum=doneQ+1;
   const canNext=isAnswered(formIdx);
-
   let body='';
   if(q.type==='radio'){
     body=`<div class="options">${q.opts.map(o=>`
@@ -449,7 +476,7 @@ function renderForm(){
         <span>${o}</span></button>`).join('')}
       ${q.other?`<input class="other-input" placeholder="Other..." value="${formAnswers[q.id+'_o']||''}" oninput="formAnswers['${q.id}_o']=this.value"/>`:''}
     </div>`;
-  } else if(q.type==='check'){
+  }else if(q.type==='check'){
     const sel=formAnswers[q.id]||[];
     body=`<div class="options">${q.opts.map(o=>`
       <button class="opt${sel.includes(o)?' selected':''}" onclick="selC('${q.id}','${esc(o)}')">
@@ -457,12 +484,12 @@ function renderForm(){
         <span>${o}</span></button>`).join('')}
       ${q.other?`<input class="other-input" placeholder="Other..." value="${formAnswers[q.id+'_o']||''}" oninput="formAnswers['${q.id}_o']=this.value"/>`:''}
     </div>`;
-  } else if(q.type==='scale'){
+  }else if(q.type==='scale'){
     const v=formAnswers[q.id];
     body=`<div><div class="scale-row">${[1,2,3,4,5].map(n=>`
       <button class="scale-btn${v===n?' selected':''}" onclick="selS('${q.id}',${n})">${n}</button>`).join('')}</div>
       <div class="scale-labels"><span>${q.min}</span><span>${q.max}</span></div></div>`;
-  } else if(q.type==='rank'){
+  }else if(q.type==='rank'){
     if(!rankOrders[q.id])rankOrders[q.id]=[...q.items];
     body=`<div>${rankOrders[q.id].map((it,i)=>`
       <div class="rank-item" draggable="true" data-qid="${q.id}" data-idx="${i}"
@@ -470,7 +497,7 @@ function renderForm(){
         <span class="rank-num">${i+1}</span><span>${it}</span>
         <span style="margin-left:auto;color:#b0aea8;font-size:14px">⠿</span>
       </div>`).join('')}</div>`;
-  } else if(q.type==='voice'){
+  }else if(q.type==='voice'){
     const txt=voiceText[q.id]||'';
     body=`<div class="voice-area">
       <div class="mic-row">
@@ -488,16 +515,16 @@ function renderForm(){
         oninput="voiceText['${q.id}']=this.value;rN()">${txt}</textarea>
       ${txt?'<div class="edit-note">you can edit this</div>':''}
     </div>`;
-  } else if(q.type==='text'){
+  }else if(q.type==='text'){
     body=`<input class="plain-input" value="${formAnswers[q.id]||''}"
       placeholder="${q.placeholder||''}" oninput="formAnswers['${q.id}']=this.value;rN()"/>`;
   }
-
+  const isLast=formIdx===FORM_QS.length-1;
   app.innerHTML=`<div class="form-stage">
     <div class="f-header"><span class="f-pill">${q.section}</span></div>
     <div class="f-prog-track"><div class="f-prog-fill" style="width:${pct}%"></div></div>
     <div class="f-body">
-      <p class="q-meta">Question ${qnum} of ${totalQ}</p>
+      <p class="q-meta">Question ${doneQ+1} of ${totalQ}</p>
       <p class="q-text">${q.text}</p>
       ${q.sub?`<p class="q-sub">${q.sub}</p>`:''}
       ${body}
@@ -507,13 +534,12 @@ function renderForm(){
       <div class="nav-row">
         <button class="btn-back" onclick="fBack()">← back</button>
         <button class="btn-next" id="fn" ${canNext?'':'disabled'} onclick="fNext()">
-          ${formIdx===FORM_QS.length-1?'submit':'next →'}
+          ${isLast?'submit':'next →'}
         </button>
       </div>
     </div>
   </div>`;
 }
-
 function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function rN(){const b=document.getElementById('fn');if(b)b.disabled=!isAnswered(formIdx);}
 function selR(id,val){formAnswers[id]=val;renderForm();}
@@ -529,12 +555,9 @@ function dS(e){dIdx=parseInt(e.currentTarget.dataset.idx);dQid=e.currentTarget.d
 function dO(e){e.preventDefault();}
 function dD(e){
   e.preventDefault();
-  const t=e.target.closest('.rank-item');
-  if(!t||!dQid)return;
-  const to=parseInt(t.dataset.idx);
-  if(dIdx===null||dIdx===to)return;
-  const arr=rankOrders[dQid];
-  const m=arr.splice(dIdx,1)[0];arr.splice(to,0,m);
+  const t=e.target.closest('.rank-item');if(!t||!dQid)return;
+  const to=parseInt(t.dataset.idx);if(dIdx===null||dIdx===to)return;
+  const arr=rankOrders[dQid];const m=arr.splice(dIdx,1)[0];arr.splice(to,0,m);
   dIdx=null;dQid=null;renderForm();
 }
 function tMic(qid){
@@ -542,48 +565,51 @@ function tMic(qid){
   const SR=getSpeech();
   if(!SR){const s=document.getElementById('ms-'+qid);if(s)s.textContent='mic not supported — type below';return;}
   micActive=true;
-  const btn=document.getElementById('mb-'+qid);
-  const status=document.getElementById('ms-'+qid);
-  const ta=document.getElementById('vt-'+qid);
+  const btn=document.getElementById('mb-'+qid),status=document.getElementById('ms-'+qid),ta=document.getElementById('vt-'+qid);
   if(btn)btn.classList.add('on');
   if(status){status.textContent='listening...';status.classList.add('live');}
-  const base=voiceText[qid]||'';
-  recognition=SR;
+  const base=voiceText[qid]||'';recognition=SR;
   SR.onresult=e=>{
     let fin=base,interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       if(e.results[i].isFinal){fin+=(fin?' ':'')+e.results[i][0].transcript;voiceText[qid]=fin;}
       else interim=e.results[i][0].transcript;
     }
-    if(ta)ta.value=fin+(interim?' '+interim:'');
-    rN();
+    if(ta)ta.value=fin+(interim?' '+interim:'');rN();
   };
   SR.onerror=()=>{stopMic();renderForm();};
   SR.onend=()=>{if(micActive)SR.start();};
   SR.start();
 }
 function fNext(){formIdx++;renderForm();}
-function fBack(){
-  stopMic();
-  if(formIdx>0){formIdx--;renderForm();}
-  else{stage='swipe';swipeIdx=SWIPE_CARDS.length-1;renderSwipe();}
-}
+function fBack(){stopMic();if(formIdx>0){formIdx--;renderForm();}else{stage='swipe';renderSwipe();}}
 function fSkip(){if(!FORM_QS[formIdx].required){formIdx++;renderForm();}}
 
-/* ===================== DONE ===================== */
+/* ── SUBMIT ── */
+function submitAndDone(){
+  const payload={
+    timestamp:new Date().toISOString(),
+    swipes:swipeAnswers,form:formAnswers,
+    voice:voiceText,rank:rankOrders,
+    yesCount,noCount
+  };
+  saveToSheet(payload);
+  renderDone();
+}
+
+/* ── DONE ── */
 function renderDone(){
   app.innerHTML=`<div class="done-stage">
     <div class="done-title">Thank<br>you.</div>
-    <p class="done-sub">Your responses have been recorded. Honest detail like this is exactly what good research needs.</p>
+    <p class="done-sub">Your responses feed real research into how denim is worn and lived in India.</p>
     <div class="tally">
-      <div class="tally-box tally-yes"><div class="tally-num">${yesCount}</div><div class="tally-label">related to</div></div>
-      <div class="tally-box tally-no"><div class="tally-num">${noCount}</div><div class="tally-label">passed on</div></div>
+      <div class="tally-box tally-yes"><div class="tally-num">${yesCount}</div><div class="tally-label">yes answers</div></div>
+      <div class="tally-box tally-no"><div class="tally-num">${noCount}</div><div class="tally-label">no answers</div></div>
     </div>
   </div>`;
 }
 
-/* kick off */
-renderSwipe();
+renderLand();
 </script>
 </body>
 </html>
